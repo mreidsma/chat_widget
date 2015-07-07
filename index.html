@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<title>Get Help from the University Libraries</title>
+
+	<style>
+	body { background-color: #0065a4;}
+	.lib-form { width: 94%; max-width: 25em; margin: 0 auto; font-family: Arial,sans-serif; padding: 1.5em 2%; background-color: #fff;}
+	.lib-form label { font-weight: bold; display: block;}
+	.lib-form textarea { border: 1px solid #ddd; padding: .5em 1%; width: 90%; margin: .5em auto;}
+	ul#results { list-style: none; padding: 0; margin: 0; margin-bottom: 1.5em;}
+	ul#results h4 { border-bottom: 1px solid #ddd; margin-bottom: .5em;}
+	input[type="submit"] {display: inline-block; margin-bottom: 0; font-weight: 400; text-align: center; vertical-align: middle; cursor: pointer; background-image: none; border: 1px solid transparent; white-space: nowrap; padding: 6px 12px; font-size: 14px; line-height: 1.428571429; border-radius: 4px; -webkit-appearance: none; -moz-appearance: none; -webkit-user-select: none; -moz-user-select: none; -ms-user-select: none; -o-user-select: none; user-select: none; text-decoration: none; color: #fff; background-color: #428bca; border-color: #357ebd; } 
+	ul#results li { line-height: 1.75em;}
+	</style>
+
+</head>
+<body>
+
+	<div id="la-modal">
+	      
+		<form action="" method="post" id="la-help" class="lib-form">
+		
+		<label for="question">How can we help you?</label>
+		<textarea name="question" id="question" required="required"></textarea>
+
+		<ul id="results">
+		</ul>
+		
+		<input type="submit" class="lib-button-small" value="Search the Knowledge Base">
+		
+		</form>   
+		
+		
+	</div>
+
+<script src="//ajax.googleapis.com/ajax/libs/jquery/1.11.1/jquery.min.js"></script>
+<script>
+   // Search LA API when question is asked  
+
+   // set variables
+   var chatOnline, submitUrl;
+
+	$(function () {
+	    var minlength = 3;
+
+	    $("#question").keyup(function () {
+	        var that = this,
+	        value = $(this).val();
+
+	        if (value.length >= minlength ) {
+	            $.ajax({
+	                type: "GET",
+	                url: "//api2.libanswers.com/1.0/search/" + value,
+	                data: {
+	                    'iid' : 1050,
+	                    'callback' : 'localJsonpCallback',
+						'limit' : 5
+	                },
+	                dataType: "jsonp"
+	                
+	            });
+	        }
+	    });
+	}); 
+
+	function getChatStatus() {
+		chatId = 1043;
+		$.ajax({
+	                type: "GET",
+	                url: "//api2.libanswers.com/1.0/chat/widgets/status/" + chatId,
+	                crossDomain: true,
+	                dataType: "jsonp",
+	                success: function(json) {
+	                	chatOnline = json.data.online;
+	                	//chatOnline = false;
+	                	if(chatOnline == false) {
+	                		console.log('Chat is offline');
+	                		$('#la-help').submit(function(e) {
+						   		// Trick the form into searching the knowledge base if you hit submit
+						   		e.preventDefault();
+						   		var searchValue = $('#question').val();
+						   		window.location.href = 'http://help.library.gvsu.edu/search/?q=' + encodeURIComponent(searchValue);
+						   });
+	                	} else { // online
+	                		console.log('Chat is online');
+	                		// Direct the form to the chat button instead of the contact form in LA
+	                		console.log('Changing the id of the form to indicate chat is online');
+	                		$('.lib-form').attr('action',submitUrl).attr('id','la-chat');
+	                		console.log('Changing the label of the form to reflect chat and not search');
+	                		$('.lib-form').find('input[type="submit"]').val('Ask Question');
+	                		$('#la-chat').submit(function(e) {
+								// Trick the form into starting a chat if you hit submit
+						   		e.preventDefault();
+						   		var searchValue = $('#question').val();
+						   		window.location.href = 'http://help.library.gvsu.edu/search/?q=' + encodeURIComponent(searchValue);
+	                		});
+	                	}
+	                }
+	            });
+	}
+
+	function localJsonpCallback(json) {
+		q = json.data.search.results;
+		if(q.length > 0) {
+			$('ul#results').html('<li><h4>Are any of these helpful?</h4></li>');
+			$.each(q, function () {
+			$('ul#results').append('<li id="answer-' + this.id + '"><a href="' + this.url + '">' + this.question + '</a></li>');
+
+			// Change the button label
+			console.log('Changing the button text');
+			if(chatOnline == false) {
+				$('input[type="submit"]').val('Skip and search the Knowledge Base');
+			} else {
+				$('input[type="submit"]').val('Skip and ask question');
+			}
+
+			// Show me all the responses
+       		console.log(this.question);
+       		console.log(this.url);
+       		console.log(this.topics[0]);
+    	});
+		}
+		
+
+		
+
+	}              
+
+   // Change routing of button if chat is online or not
+
+   getChatStatus();
+
+</script>
+</body>
+</html>
